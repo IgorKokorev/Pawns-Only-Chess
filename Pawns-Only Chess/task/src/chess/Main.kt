@@ -8,7 +8,6 @@ const val INV_INP = "Invalid Input"
 val chessBoard = ChessBoard()
 var playerWName = ""
 var playerBName = ""
-var colorTurn = 'W'
 
 
 fun main() {
@@ -29,7 +28,7 @@ fun main() {
 fun game() {
     val correctMove = Regex("[a-h][1-8][a-h][1-8]")
     while (true) {
-        if (colorTurn == 'W') print(playerWName)
+        if (chessBoard.colorTurn == 'W') print(playerWName)
         else print(playerBName)
         println("'s turn:")
         val move = readln()
@@ -46,7 +45,8 @@ fun game() {
             continue
         }
         printBoard()
-        colorTurn = if (colorTurn == 'W') 'B' else 'W'
+        if(chessBoard.checkLastRow() || chessBoard.checkLeft())
+            println((if (chessBoard.colorTurn == 'W') "Black" else "White") + " wins")
     }
     println("Bye!")
 }
@@ -79,7 +79,13 @@ fun printRow( n: Int) {
 }
 
 class ChessBoard {
+    // board
     val board: Array<Array<ChessPiece?>> =  Array(8) { Array(8) { null } }
+    // who's turn
+    var colorTurn = 'W'
+    // check if 2-cell move has just been made
+    private var isPassed = false
+    private var colPassed = -1
 
     // fill the board with pawns only
     fun startPawnsOnly() {
@@ -89,10 +95,6 @@ class ChessBoard {
         }
     }
 
-    // check if 2-cell move has just been made
-    private var isPassed = false
-    private var colPassed = -1
-
     // move a pawn
     fun move(move: String) {
 
@@ -101,7 +103,7 @@ class ChessBoard {
         val toCol: Int = move[2] - 'a'
         val toRow: Int = move[3] - '1'
 
-        val piece = chessBoard.board[fromRow][fromCol]
+        val piece = board[fromRow][fromCol]
         // check if we try to make a move from empty cell
         // or to move a piece of another color
         if (piece == null || piece.color != colorTurn)
@@ -116,6 +118,7 @@ class ChessBoard {
         if (fromCol != toCol) checkTake(direction, fromRow, fromCol, toRow, toCol)
         else checkMove(direction, fromRow, fromCol, toRow, toCol)
 
+        colorTurn = if (colorTurn == 'W') 'B' else 'W'
     }
 
     private fun checkTake(direction: Int, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int) {
@@ -127,21 +130,22 @@ class ChessBoard {
 
 
         // check "en passant"
-        if (chessBoard.board[toRow][toCol] == null) {
+        if (board[toRow][toCol] == null) {
             if (!isPassed || toCol != colPassed || (fromRow * 2 - 7) != direction)
                 throw ChessException(INV_INP)
-        } else if (chessBoard.board[toRow][toCol]!!.color == colorTurn)
+            else board[toRow - direction][toCol] = null
+        } else if (board[toRow][toCol]!!.color == colorTurn)
             throw ChessException(INV_INP)
 
         // Moving
-        chessBoard.board[toRow][toCol] = chessBoard.board[fromRow][fromCol]
-        chessBoard.board[fromRow][fromCol] = null
+        board[toRow][toCol] = board[fromRow][fromCol]
+        board[fromRow][fromCol] = null
         isPassed = false
     }
 
     private fun checkMove(direction: Int, fromRow: Int, fromCol: Int, toRow: Int, toCol: Int) {
         // check if the target cell is empty
-        if (chessBoard.board[toRow][toCol] != null)
+        if (board[toRow][toCol] != null)
             throw ChessException(INV_INP)
         // move back or in place
         if ((toRow - fromRow) * direction <= 0)
@@ -155,11 +159,28 @@ class ChessBoard {
             throw ChessException(INV_INP)
 
         // Moving
-        chessBoard.board[toRow][toCol] = chessBoard.board[fromRow][fromCol]
-        chessBoard.board[fromRow][fromCol] = null
+        board[toRow][toCol] = board[fromRow][fromCol]
+        board[fromRow][fromCol] = null
         isPassed = (toRow - fromRow) * direction == 2
         colPassed = fromCol
     }
+
+    fun checkLastRow(): Boolean {
+        val row = if (colorTurn == 'W') 0 else 7
+        for (col in 0..7)
+            if (board[row][col] != null) return true
+        return false
+    }
+
+    fun checkLeft(): Boolean {
+        for (row in 0..7)
+            for (col in 0..7)
+                if (board[row][col] != null &&
+                    board[row][col]!!.color == colorTurn)
+                    return false
+        return true
+    }
+
 }
 
 class ChessPiece( color: Char ) {
