@@ -45,8 +45,14 @@ fun game() {
             continue
         }
         printBoard()
-        if(chessBoard.checkLastRow() || chessBoard.checkLeft())
-            println((if (chessBoard.colorTurn == 'W') "Black" else "White") + " wins")
+        if(chessBoard.mate()) {
+            println((if (chessBoard.colorTurn == 'W') "Black" else "White") + " Wins!")
+            break
+        }
+        if (chessBoard.stalemate()) {
+            println("Stalemate!")
+            break
+        }
     }
     println("Bye!")
 }
@@ -59,7 +65,7 @@ fun printBoard() {
     }
     print(" ")
     for (ch in 'a'..'h') print("   $ch")
-    println("")
+    println("\n")
 }
 
 fun printDelimiter() {
@@ -165,20 +171,45 @@ class ChessBoard {
         colPassed = fromCol
     }
 
-    fun checkLastRow(): Boolean {
+    private fun checkLastRow(): Boolean {
         val row = if (colorTurn == 'W') 0 else 7
         for (col in 0..7)
             if (board[row][col] != null) return true
         return false
     }
 
-    fun checkLeft(): Boolean {
+    private fun checkLeft(): Boolean {
         for (row in 0..7)
             for (col in 0..7)
                 if (board[row][col] != null &&
                     board[row][col]!!.color == colorTurn)
                     return false
         return true
+    }
+
+    fun mate(): Boolean = checkLastRow() || checkLeft()
+    fun stalemate(): Boolean {
+        for (row in 0..7)
+            for (col in 0..7)
+                if (board[row][col] != null &&
+                    board[row][col]!!.color == colorTurn)
+                    if (canMove(row,col)) return false
+        return true
+    }
+
+    private fun canMove(row: Int, col: Int): Boolean {
+        val direction = if (colorTurn == 'W') 1 else -1
+
+        if (col > 0 &&
+            board[row + direction][col-1] != null &&
+            board[row + direction][col-1]!!.color != colorTurn)
+            return true
+        if (col < 7 &&
+            board[row + direction][col+1] != null &&
+            board[row + direction][col+1]!!.color != colorTurn)
+            return true
+
+        return board[row + direction][col] == null
     }
 
 }
